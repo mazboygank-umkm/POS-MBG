@@ -1455,7 +1455,17 @@ function getTotal(){
 // Menghasilkan ID transaksi yang dijamin unik lintas toko/device meskipun terjadi
 // bersamaan (timestamp + id toko + random suffix), sehingga tidak ada dua transaksi
 // yang bisa saling menimpa saat disinkronkan ke Firebase secara per-record.
-function generateTxId(){return Date.now()+parseInt(Math.random()*1000)}
+function generateTxId(){
+  // ID lama (timestamp + random 0-999) bisa BENTROK kalau 2 kasir di toko
+  // berbeda checkout hampir bersamaan. Karena sync Firebase menulis per-id
+  // (kasirpro_db/transactions/{id}), ID yang sama akan saling MENIMPA —
+  // ini penyebab transaksi QRIS "berubah" jadi tunai di data.
+  if(typeof crypto!=='undefined'&&crypto.randomUUID){
+    return crypto.randomUUID();
+  }
+  const rand=Math.random().toString(36).slice(2,10);
+  return `tx_${Date.now()}_${currentStoreId||0}_${rand}`;
+}
 
 function checkout(){
   if(cart.length===0){toast('Keranjang masih kosong!','error');return}
