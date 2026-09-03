@@ -155,6 +155,25 @@ h1,h2,h3{font-family:'Space Grotesk',sans-serif}
 .kembalian{font-size:.87rem;font-weight:700;margin-bottom:.5rem;display:none;padding:.45rem .75rem;border-radius:var(--r);background:var(--green-bg);border:1px solid var(--green)}
 
 /* =============================================
+   QRIS PAYMENT SECTION
+   ============================================= */
+.qris-section{display:none;margin-bottom:.6rem;text-align:center;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:1rem}
+.qris-section.show{display:block}
+.qris-section img{max-width:200px;width:100%;border-radius:var(--r);background:#fff;padding:.5rem;margin-bottom:.6rem}
+.qris-section .qris-amount{font-size:1.15rem;font-weight:800;color:var(--accent2);margin-bottom:.15rem}
+.qris-section .qris-label{font-size:.75rem;color:var(--text2);margin-bottom:.75rem;line-height:1.4}
+.qris-section .qris-empty{font-size:.82rem;color:var(--text2);padding:.75rem 0;line-height:1.5}
+
+.qris-success-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:3000;display:none;align-items:center;justify-content:center;padding:1rem}
+.qris-success-overlay.show{display:flex}
+.qris-success-card{background:var(--bg2);border:1px solid var(--green);border-radius:var(--r3);padding:2.25rem 1.75rem;text-align:center;width:min(320px,92vw);animation:qrisPopCenter .35s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--shadow)}
+@keyframes qrisPopCenter{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.qris-success-check{font-size:3.5rem;margin-bottom:.6rem;animation:qrisCheckPop .5s ease}
+@keyframes qrisCheckPop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+.qris-success-card h3{font-size:1.2rem;margin-bottom:.4rem;color:var(--green)}
+.qris-success-card p{font-size:.85rem;color:var(--text2);line-height:1.5}
+
+/* =============================================
    TAP CASH — 7 GRID
    ============================================= */
 .tapcash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.6rem}
@@ -477,6 +496,22 @@ select option{background:var(--bg3)}
             <div class="url-input-row"><input type="text" id="sheet-url" placeholder="Google Sheet webhook URL (Apps Script Web App)..."><button class="btn btn-ghost btn-sm" onclick="saveSheetUrl()">Simpan</button></div>
             <div id="sheet-last-sent" style="font-size:.75rem;color:var(--text2)"></div>
           </div>
+          <div class="settings-section" style="margin-bottom:1rem">
+            <h4>📋 Data Laporan Shift (untuk WhatsApp)</h4>
+            <div style="font-size:.78rem;color:var(--text2);margin-bottom:.75rem">Isi data berikut sebelum kirim laporan WhatsApp. Otomatis mengikuti filter tanggal &amp; toko yang dipilih di atas (harus toko tunggal, bukan "Semua Toko").</div>
+            <div class="form-row">
+              <div class="form-group"><label>Shift</label><input type="text" id="wa-shift-input" placeholder="Pagi / Siang / Malam"></div>
+              <div class="form-group"><label>Satuan Volume</label><input type="text" id="wa-satuan-input" placeholder="Cup / Pcs / Porsi" value="Cup"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Modal Awal (Rp)</label><input type="number" id="wa-modal-input" placeholder="0"></div>
+              <div class="form-group"><label>Sisa Stok (angka)</label><input type="number" id="wa-sisacup-input" placeholder="0"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Sisa Bahan</label><input type="text" id="wa-sisabahan-input" placeholder="Opsional..."></div>
+              <div class="form-group"><label>Catatan</label><input type="text" id="wa-note-input" placeholder="Opsional..."></div>
+            </div>
+          </div>
           <div class="date-filter">
             <span style="font-size:.85rem;color:var(--text2)">Filter:</span>
             <input type="date" id="from-date">
@@ -645,6 +680,15 @@ select option{background:var(--bg3)}
             </div>
           </div>
           <div class="settings-section">
+            <h4>QRIS Pembayaran</h4>
+            <div style="font-size:.85rem;color:var(--text2);margin-bottom:.75rem">Upload gambar/barcode QRIS toko ini. Barcode akan otomatis muncul saat kasir memilih metode bayar QRIS di halaman Kasir.</div>
+            <div id="qris-preview-wrap" style="margin-bottom:.75rem"></div>
+            <input type="file" id="qris-file-input" accept="image/*" onchange="uploadQrisImage(event)" style="margin-bottom:.6rem;font-size:.82rem;color:var(--text2)">
+            <div style="display:flex;gap:.5rem">
+              <button class="btn btn-danger btn-sm" onclick="removeQrisImage()">🗑️ Hapus QRIS</button>
+            </div>
+          </div>
+          <div class="settings-section">
             <h4>Preferensi</h4>
             <div class="settings-row">
               <div><div style="font-size:.9rem;font-weight:600">Auto-print struk</div><div style="font-size:.78rem;color:var(--text2)">Cetak otomatis setelah transaksi</div></div>
@@ -733,9 +777,15 @@ select option{background:var(--bg3)}
         </div>
       </div>
 
+      <!-- QRIS barcode + payment confirmation -->
+      <div class="qris-section" id="qris-section">
+        <div id="qris-code-wrap"></div>
+        <button type="button" class="btn btn-success btn-full" style="font-size:1rem;padding:.85rem;font-weight:800" onclick="confirmQrisPayment()">✅ Pembayaran Diterima (Customer Sudah Bayar)</button>
+      </div>
+
       <div class="kembalian" id="kembalian-display"></div>
 
-      <!-- Checkout button for non-tunai -->
+      <!-- Checkout button for transfer -->
       <button class="btn btn-success btn-full" id="non-tunai-checkout" onclick="checkout()" style="display:none;font-size:1rem;padding:.9rem;margin-top:.35rem;font-weight:800">✅ Konfirmasi &amp; Proses Pesanan</button>
     </div>
   </div>
@@ -755,6 +805,15 @@ select option{background:var(--bg3)}
     </div>
     <div class="mini-chart" id="mini-chart"></div>
     <button onclick="showPage('laporan');closeFloatingChartPopup()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:.6rem">Lihat Detail ↗</button>
+  </div>
+</div>
+
+<!-- QRIS PAYMENT SUCCESS OVERLAY -->
+<div class="qris-success-overlay" id="qris-success-overlay">
+  <div class="qris-success-card">
+    <div class="qris-success-check">✅</div>
+    <h3>Pembayaran QRIS Berhasil!</h3>
+    <p>Customer telah membayar <strong id="qris-success-amount">Rp 0</strong> via QRIS</p>
   </div>
 </div>
 
@@ -1240,9 +1299,10 @@ function updateCart(){
   document.getElementById('total-display').textContent=fmtRp(total);
   calcKembalian();
   updateFab();
-  // show/hide big checkout button for non-tunai
+  // show/hide big checkout button for transfer, refresh QRIS amount if visible
   const nonTunai=document.getElementById('non-tunai-checkout');
-  if(nonTunai)nonTunai.style.display=paymentMethod!=='tunai'?'block':'none';
+  if(nonTunai)nonTunai.style.display=paymentMethod==='transfer'?'block':'none';
+  if(paymentMethod==='qris')renderQrisCode();
 }
 function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);updateCart()}
 function clearCart(){cart=[];document.getElementById('customer-name').value='';document.getElementById('discount-val').value='';updateCart();closeCartModal()}
@@ -1250,9 +1310,21 @@ function setPayment(m){
   paymentMethod=m;
   ['tunai','qris','transfer'].forEach(p=>document.getElementById('pay-'+p).classList.toggle('active',p===m));
   document.getElementById('cash-section').classList.toggle('show',m==='tunai');
+  document.getElementById('qris-section').classList.toggle('show',m==='qris');
+  if(m==='qris')renderQrisCode();
   const nonTunai=document.getElementById('non-tunai-checkout');
-  if(nonTunai)nonTunai.style.display=m!=='tunai'?'block':'none';
+  if(nonTunai)nonTunai.style.display=(m==='transfer')?'block':'none';
   if(m!=='tunai')document.getElementById('kembalian-display').style.display='none';
+}
+function renderQrisCode(){
+  const wrap=document.getElementById('qris-code-wrap');
+  if(!wrap)return;
+  const total=getTotal();
+  if(db.settings.qrisImage){
+    wrap.innerHTML=`<img src="${db.settings.qrisImage}" alt="QRIS"><div class="qris-amount">${fmtRp(total)}</div><div class="qris-label">Minta customer scan QRIS di atas untuk membayar, lalu klik tombol di bawah setelah pembayaran diterima.</div>`;
+  }else{
+    wrap.innerHTML=`<div class="qris-empty">⚠️ Barcode QRIS belum diupload.<br>Buka <b>Pengaturan → QRIS Pembayaran</b> untuk upload barcode QRIS toko ini.</div><div class="qris-amount" style="margin-top:.5rem">${fmtRp(total)}</div>`;
+  }
 }
 function calcKembalian(){
   if(paymentMethod!=='tunai'){document.getElementById('kembalian-display').style.display='none';return}
@@ -1294,6 +1366,44 @@ function checkout(){
   document.getElementById('cash-input').value='';
   updateFloatingChart();
   toast('✅ Transaksi berhasil!','success');
+}
+
+// ============ QRIS PAYMENT CONFIRMATION ============
+function confirmQrisPayment(){
+  if(cart.length===0){toast('Keranjang masih kosong!','error');return}
+  const subtotal=cart.reduce((s,c)=>s+(c.harga+c.toppingPrice)*c.qty,0);
+  const discVal=parseFloat(document.getElementById('discount-val').value)||0;
+  const discType=document.getElementById('discount-type').value;
+  let discAmt=discType==='persen'?Math.round(subtotal*discVal/100):Math.min(discVal,subtotal);
+  const total=subtotal-discAmt;
+  const tx={id:db.nextTxId++,no:`TX-${String(db.nextTxId-1).padStart(4,'0')}`,waktu:new Date().toISOString(),customer:document.getElementById('customer-name').value||'Umum',items:[...cart.map(c=>({...c}))],subtotal,discAmt,discType,discVal,total,metode:'qris',cash:total,kembalian:0,kasir:currentUser.nama,storeId:currentStoreId};
+  cart.forEach(item=>{const menu=db.menus.find(m=>m.id===item.id);if(menu){const cfg=getMenuConfig(menu,currentStoreId);menu.storeSettings[String(currentStoreId)]={...cfg,stok:Math.max(0,cfg.stok-item.qty)}}});
+  db.transactions.push(tx);saveDB();
+  closeCartModal();
+  showQrisSuccess(total,()=>{showStruk(tx);clearCart();updateFloatingChart()});
+}
+function showQrisSuccess(total,then){
+  const overlay=document.getElementById('qris-success-overlay');
+  const amountEl=document.getElementById('qris-success-amount');
+  if(amountEl)amountEl.textContent=fmtRp(total);
+  overlay.classList.add('show');
+  playSuccessSound();
+  setTimeout(()=>{overlay.classList.remove('show');if(typeof then==='function')then()},1800);
+}
+function playSuccessSound(){
+  try{
+    const soundToggle=document.getElementById('sound-notif');
+    if(soundToggle&&!soundToggle.checked)return;
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const o=ctx.createOscillator();const g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);
+    o.type='sine';
+    o.frequency.setValueAtTime(880,ctx.currentTime);
+    o.frequency.setValueAtTime(1320,ctx.currentTime+.12);
+    g.gain.setValueAtTime(.15,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.4);
+    o.start();o.stop(ctx.currentTime+.4);
+  }catch(e){}
 }
 
 // ============ STRUK ============
@@ -1906,8 +2016,43 @@ function loadSettings(){
   document.getElementById('toko-footer').value=db.settings.footer||'';
   const waEl=document.getElementById('wa-number');if(waEl)waEl.value=db.settings.waNumber||'';
   const sheetEl=document.getElementById('sheet-url');if(sheetEl)sheetEl.value=db.settings.sheetUrl||'';
+  renderQrisPreview();
 }
 function saveTokoSettings(){db.settings.nama=document.getElementById('toko-nama').value;db.settings.alamat=document.getElementById('toko-alamat').value;db.settings.telp=document.getElementById('toko-telp').value;db.settings.footer=document.getElementById('toko-footer').value;saveDB();toast('✅ Pengaturan disimpan!','success')}
+
+// ============ QRIS IMAGE UPLOAD (PENGATURAN) ============
+function uploadQrisImage(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  if(!file.type.startsWith('image/')){toast('File harus berupa gambar','error');e.target.value='';return}
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    db.settings.qrisImage=ev.target.result;
+    saveDB();
+    renderQrisPreview();
+    if(paymentMethod==='qris')renderQrisCode();
+    toast('✅ Barcode QRIS berhasil diupload!','success');
+  };
+  reader.onerror=function(){toast('Gagal membaca file gambar','error')};
+  reader.readAsDataURL(file);
+  e.target.value='';
+}
+function removeQrisImage(){
+  if(!db.settings.qrisImage){toast('Belum ada barcode QRIS','info');return}
+  if(!confirm('Hapus gambar barcode QRIS ini?'))return;
+  db.settings.qrisImage=null;
+  saveDB();
+  renderQrisPreview();
+  if(paymentMethod==='qris')renderQrisCode();
+  toast('🗑️ Barcode QRIS dihapus','success');
+}
+function renderQrisPreview(){
+  const wrap=document.getElementById('qris-preview-wrap');
+  if(!wrap)return;
+  wrap.innerHTML=db.settings.qrisImage
+    ?`<img src="${db.settings.qrisImage}" style="max-width:180px;width:100%;border-radius:8px;background:#fff;padding:.5rem;display:block">`
+    :'<div style="font-size:.8rem;color:var(--text2)">Belum ada gambar QRIS. Upload barcode QRIS toko dari file gambar (JPG/PNG).</div>';
+}
 
 // ============ DASHBOARD ============
 function renderDashboard(){
